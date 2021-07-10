@@ -3498,6 +3498,11 @@ static void setup_none(struct lo_data *lo)
         fuse_log(FUSE_LOG_ERR, "open(\"/proc/self/fd\", O_PATH): %m\n");
         exit(1);
     }
+
+    if (chdir(lo->source) != 0) {
+        fuse_log(FUSE_LOG_ERR, "chdir(\"%s\"): %m\n", lo->source);
+        exit(1);
+    }
 }
 
 /*
