@@ -1140,6 +1140,11 @@ static int lo_change_cred(fuse_req_t req, struct lo_cred *old)
 {
     int res;
 
+    // Keep permissions as host user in case of unprivileged mode
+    if (geteuid() != 0) {
+        return 0;
+    }
+
     old->euid = geteuid();
     old->egid = getegid();
 
@@ -1163,6 +1168,11 @@ static int lo_change_cred(fuse_req_t req, struct lo_cred *old)
 static void lo_restore_cred(struct lo_cred *old)
 {
     int res;
+
+    // No need to restore creds in unprivileged mode
+    if (geteuid() != 0) {
+        return;
+    }
 
     res = syscall(OURSYS_setresuid, -1, old->euid, -1);
     if (res == -1) {
