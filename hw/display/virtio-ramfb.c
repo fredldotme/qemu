@@ -1,4 +1,5 @@
 #include "qemu/osdep.h"
+#include "sysemu/sysemu.h"
 #include "hw/pci/pci.h"
 #include "ui/console.h"
 #include "hw/qdev-properties.h"
@@ -27,6 +28,18 @@ struct VirtIORAMFBBaseClass {
     DeviceReset parent_reset;
 };
 
+static int virtio_ramfb_get_flags(void *opaque)
+{
+    VirtIORAMFBBase *vramfb = opaque;
+    VirtIOGPUBase *g = vramfb->vgpu;
+
+    if (g->hw_ops->get_flags) {
+        return g->hw_ops->get_flags(g);
+    } else {
+        return 0;
+    }
+}
+
 static void virtio_ramfb_invalidate_display(void *opaque)
 {
     VirtIORAMFBBase *vramfb = opaque;
@@ -34,6 +47,16 @@ static void virtio_ramfb_invalidate_display(void *opaque)
 
     if (g->enable) {
         g->hw_ops->invalidate(g);
+    }
+}
+
+static void virtio_ramfb_text_update(void *opaque, console_ch_t *chardata)
+{
+    VirtIORAMFBBase *vramfb = opaque;
+    VirtIOGPUBase *g = vramfb->vgpu;
+
+    if (g->hw_ops->text_update) {
+        g->hw_ops->text_update(g, chardata);
     }
 }
 
@@ -70,11 +93,24 @@ static void virtio_ramfb_gl_block(void *opaque, bool block)
     }
 }
 
+static void virtio_ramfb_gl_flushed(void *opaque)
+{
+    VirtIORAMFBBase *vramfb = opaque;
+    VirtIOGPUBase *g = vramfb->vgpu;
+
+    if (g->hw_ops->gl_flushed) {
+        g->hw_ops->gl_flushed(g);
+    }
+}
+
 static const GraphicHwOps virtio_ramfb_ops = {
+    .get_flags = virtio_ramfb_get_flags,
     .invalidate = virtio_ramfb_invalidate_display,
     .gfx_update = virtio_ramfb_update_display,
+    .text_update = virtio_ramfb_text_update,
     .ui_info = virtio_ramfb_ui_info,
     .gl_block = virtio_ramfb_gl_block,
+    .gl_flushed = virtio_ramfb_gl_flushed,
 };
 
 static const VMStateDescription vmstate_virtio_ramfb = {
@@ -161,15 +197,22 @@ struct VirtIORAMFB {
     VirtIORAMFBBase parent_obj;
 
     VirtIOGPU     vdev;
+    VirtIOGPUGL   vdevgl;
 };
 
 static void virtio_ramfb_inst_initfn(Object *obj)
 {
     VirtIORAMFB *dev = VIRTIO_RAMFB(obj);
 
-    virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
-                                TYPE_VIRTIO_GPU);
-    VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdev);
+    if (display_opengl) {
+        virtio_instance_init_common(obj, &dev->vdevgl, sizeof(dev->vdevgl),
+                                    TYPE_VIRTIO_GPU_GL);
+        VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdevgl);
+    } else {
+        virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
+                                    TYPE_VIRTIO_GPU);
+        VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdev);
+    }
 }
 
 static VirtioPCIDeviceTypeInfo virtio_ramfb_info = {
