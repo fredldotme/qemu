@@ -3,30 +3,9 @@
 #include "hw/pci/pci.h"
 #include "ui/console.h"
 #include "hw/qdev-properties.h"
-#include "hw/virtio/virtio-gpu-pci.h"
+#include "virtio-ramfb.h"
 #include "qapi/error.h"
-#include "hw/display/ramfb.h"
 #include "qom/object.h"
-
-/*
- * virtio-ramfb-base: This extends VirtioPCIProxy.
- */
-#define TYPE_VIRTIO_RAMFB_BASE "virtio-ramfb-base"
-OBJECT_DECLARE_TYPE(VirtIORAMFBBase, VirtIORAMFBBaseClass,
-                    VIRTIO_RAMFB_BASE)
-
-struct VirtIORAMFBBase {
-    VirtIOPCIProxy parent_obj;
-
-    VirtIOGPUBase *vgpu;
-    RAMFBState    *ramfb;
-};
-
-struct VirtIORAMFBBaseClass {
-    VirtioPCIClass parent_class;
-
-    DeviceReset parent_reset;
-};
 
 static int virtio_ramfb_get_flags(void *opaque)
 {
@@ -197,22 +176,15 @@ struct VirtIORAMFB {
     VirtIORAMFBBase parent_obj;
 
     VirtIOGPU     vdev;
-    VirtIOGPUGL   vdevgl;
 };
 
 static void virtio_ramfb_inst_initfn(Object *obj)
 {
     VirtIORAMFB *dev = VIRTIO_RAMFB(obj);
 
-    if (display_opengl) {
-        virtio_instance_init_common(obj, &dev->vdevgl, sizeof(dev->vdevgl),
-                                    TYPE_VIRTIO_GPU_GL);
-        VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdevgl);
-    } else {
-        virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
-                                    TYPE_VIRTIO_GPU);
-        VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdev);
-    }
+    virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
+                                TYPE_VIRTIO_GPU);
+    VIRTIO_RAMFB_BASE(dev)->vgpu = VIRTIO_GPU_BASE(&dev->vdev);
 }
 
 static VirtioPCIDeviceTypeInfo virtio_ramfb_info = {
