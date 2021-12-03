@@ -208,7 +208,8 @@ static unsigned long get_default_rlimit_nofile(void)
     g_autofree gchar *file_max_str = NULL;
     const rlim_t reserved_fds = 16384; /* leave at least this many fds free */
     rlim_t max_fds = 1000000; /* our default RLIMIT_NOFILE target */
-    rlim_t file_max;
+    rlim_t file_max = 0;
+    rlim_t default_max = 160075;
     struct rlimit rlim;
 
     /*
@@ -219,15 +220,17 @@ static unsigned long get_default_rlimit_nofile(void)
     if (!g_file_get_contents("/proc/sys/fs/file-max", &file_max_str,
                              NULL, NULL)) {
         fuse_log(FUSE_LOG_ERR, "can't read /proc/sys/fs/file-max\n");
-        exit(1);
+        file_max = default_max;
     }
-    file_max = g_ascii_strtoull(file_max_str, NULL, 10);
-    if (file_max < 2 * reserved_fds) {
-        fuse_log(FUSE_LOG_ERR,
-                 "The fs.file-max sysctl is too low (%lu) to allow a "
-                 "reasonable number of open files.\n",
-                 (unsigned long)file_max);
-        exit(1);
+    if (file_max == 0) {
+        file_max = g_ascii_strtoull(file_max_str, NULL, 10);
+        if (file_max < 2 * reserved_fds) {
+            fuse_log(FUSE_LOG_ERR,
+                     "The fs.file-max sysctl is too low (%lu) to allow a "
+                     "reasonable number of open files.\n",
+                     (unsigned long)file_max);
+            file_max = default_max;
+        }
     }
     max_fds = MIN(file_max - reserved_fds, max_fds);
 
