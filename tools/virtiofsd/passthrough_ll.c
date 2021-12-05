@@ -134,6 +134,7 @@ enum {
 enum {
     SANDBOX_NAMESPACE,
     SANDBOX_CHROOT,
+    SANDBOX_NONE
 };
 
 typedef struct xattr_map_entry {
@@ -145,6 +146,7 @@ typedef struct xattr_map_entry {
 struct lo_data {
     pthread_mutex_t mutex;
     int sandbox;
+    bool unprivileged;
     int debug;
     int writeback;
     int flock;
@@ -1171,6 +1173,11 @@ static int lo_change_cred(fuse_req_t req, struct lo_cred *old,
 {
     int res;
 
+    // Keep permissions as host user in case of unprivileged mode
+    if (geteuid() != 0) {
+        return 0;
+    }
+
     old->euid = geteuid();
     old->egid = getegid();
 
@@ -1197,6 +1204,11 @@ static int lo_change_cred(fuse_req_t req, struct lo_cred *old,
 static void lo_restore_cred(struct lo_cred *old, bool restore_umask)
 {
     int res;
+
+    // No need to restore creds in unprivileged mode
+    if (geteuid() != 0) {
+        return;
+    }
 
     res = syscall(OURSYS_setresuid, -1, old->euid, -1);
     if (res == -1) {
@@ -3687,6 +3699,20 @@ static void setup_capabilities(char *modcaps_in)
     pthread_mutex_unlock(&cap.mutex);
 }
 
+static void setup_none(struct lo_data *lo)
+{
+    lo->proc_self_fd = open("/proc/self/fd", O_PATH);
+    if (lo->proc_self_fd == -1) {
+        fuse_log(FUSE_LOG_ERR, "open(\"/proc/self/fd\", O_PATH): %m\n");
+        exit(1);
+    }
+
+    if (chdir(lo->source) != 0) {
+        fuse_log(FUSE_LOG_ERR, "chdir(\"%s\"): %m\n", lo->source);
+        exit(1);
+    }
+}
+
 /*
  * Use chroot as a weaker sandbox for environments where the process is
  * launched without CAP_SYS_ADMIN.
@@ -3732,12 +3758,16 @@ static void setup_sandbox(struct lo_data *lo, struct fuse_session *se,
     if (lo->sandbox == SANDBOX_NAMESPACE) {
         setup_namespaces(lo, se);
         setup_mounts(lo->source);
-    } else {
+    } else if (lo->sandbox == SANDBOX_CHROOT) {
         setup_chroot(lo);
+    } else {
+        setup_none(lo);
     }
 
-    setup_seccomp(enable_syslog);
-    setup_capabilities(g_strdup(lo->modcaps));
+    if (lo->sandbox != SANDBOX_NONE) {
+        setup_seccomp(enable_syslog);
+        setup_capabilities(g_strdup(lo->modcaps));
+    }
 }
 
 /* Set the maximum number of open file descriptors */
@@ -3825,7 +3855,11 @@ static void setup_root(struct lo_data *lo, struct lo_inode *root)
     struct stat stat;
     uint64_t mnt_id;
 
-    fd = open("/", O_PATH);
+    if (lo->sandbox == SANDBOX_NONE)
+        fd = open(lo->source, O_PATH);
+    else
+        fd = open("/", O_PATH);
+
     if (fd == -1) {
         fuse_log(FUSE_LOG_ERR, "open(%s, O_PATH): %m\n", lo->source);
         exit(1);
@@ -3953,6 +3987,12 @@ int main(int argc, char *argv[])
 
     lo_map_init(&lo.dirp_map);
     lo_map_init(&lo.fd_map);
+
+    if (geteuid() != 0) {
+       lo.unprivileged = true;
+       lo.sandbox = SANDBOX_NONE;
+       fuse_log(FUSE_LOG_DEBUG, "Running in unprivileged passthrough mode.\n");
+    }
 
     if (fuse_parse_cmdline(&args, &opts) != 0) {
         goto err_out1;
