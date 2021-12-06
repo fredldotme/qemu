@@ -1,5 +1,5 @@
 
-#version 100 es
+#version 100
 
 attribute vec2  in_position;
 varying vec2 ex_tex_coord;
