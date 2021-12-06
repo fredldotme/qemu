@@ -1,5 +1,5 @@
 
-#version 100 es
+#version 100
 
 uniform sampler2D image;
 attribute  mediump vec2 ex_tex_coord;
