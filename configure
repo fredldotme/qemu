@@ -3629,7 +3629,9 @@ if test "$opengl" != "no" ; then
 #include <epoxy/egl.h>
 int main(void) { return 0; }
 EOF
-    if compile_prog "" "" ; then
+    epoxy_cflags=$($pkg_config --cflags epoxy 2>/dev/null)
+    epoxy_libs=$($pkg_config --libs epoxy 2>/dev/null)
+    if compile_prog "$epoxy_cflags" "$epoxy_libs" ; then
       epoxy=yes
     fi
   fi
