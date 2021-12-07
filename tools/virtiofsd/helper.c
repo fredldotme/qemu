@@ -216,12 +216,14 @@ static unsigned long get_default_rlimit_nofile(void)
      * ensures there are fds available for other processes so we don't
      * cause resource exhaustion.
      */
-    if (!g_file_get_contents("/proc/sys/fs/file-max", &file_max_str,
+    if (g_file_get_contents("/proc/sys/fs/file-max", &file_max_str,
                              NULL, NULL)) {
-        fuse_log(FUSE_LOG_ERR, "can't read /proc/sys/fs/file-max\n");
-        exit(1);
+        file_max = g_ascii_strtoull(file_max_str, NULL, 10);
+    } else {
+        fuse_log(FUSE_LOG_WARNING, "can't read /proc/sys/fs/file-max, using default.\n");
+        file_max = max_fds;
     }
-    file_max = g_ascii_strtoull(file_max_str, NULL, 10);
+
     if (file_max < 2 * reserved_fds) {
         fuse_log(FUSE_LOG_ERR,
                  "The fs.file-max sysctl is too low (%lu) to allow a "
