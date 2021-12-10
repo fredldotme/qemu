@@ -455,6 +455,33 @@ bool qemu_egl_has_dmabuf(void)
                                    "EGL_EXT_image_dma_buf_import");
 }
 
+int qemu_egl_init_dpy_hybris(DisplayGLMode mode)
+{
+    return qemu_egl_init_dpy(EGL_DEFAULT_DISPLAY, 0, mode);
+}
+
+int egl_hybris_init(DisplayGLMode mode)
+{
+    int rc;
+
+    rc = qemu_egl_init_dpy_hybris(mode);
+    if (rc != 0) {
+        /* qemu_egl_init_dpy_mesa reports error */
+        goto err;
+    }
+
+    qemu_egl_rn_ctx = qemu_egl_init_ctx();
+    if (!qemu_egl_rn_ctx) {
+        error_report("egl: egl_init_ctx failed");
+        goto err;
+    }
+
+    return 0;
+
+err:
+    return -1;
+}
+
 EGLContext qemu_egl_init_ctx(void)
 {
     static const EGLint ctx_att_core[] = {

@@ -183,8 +183,10 @@ static void egl_headless_init(DisplayState *ds, DisplayOptions *opts)
     int idx;
 
     if (egl_rendernode_init(opts->u.egl_headless.rendernode, mode) < 0) {
-        error_report("egl: render node init failed");
-        exit(1);
+        if (egl_hybris_init(mode) < 0) {
+            error_report("egl: render node and hybris init failed");
+            exit(1);
+        }
     }
 
     for (idx = 0;; idx++) {

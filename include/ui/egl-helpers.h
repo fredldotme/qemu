@@ -57,6 +57,9 @@ int qemu_egl_init_dpy_mesa(EGLNativeDisplayType dpy, DisplayGLMode mode);
 
 #endif
 
+int qemu_egl_init_dpy_hybris(DisplayGLMode mode);
+int egl_hybris_init(DisplayGLMode mode);
+
 EGLContext qemu_egl_init_ctx(void);
 bool qemu_egl_has_dmabuf(void);
 
