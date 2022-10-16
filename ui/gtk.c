@@ -1053,6 +1053,14 @@ static const guint16 *gd_get_keymap(size_t *maplen)
     }
 #endif
 
+#ifdef GDK_WINDOWING_MIR
+    if (GDK_IS_MIR_DISPLAY(dpy)) {
+        trace_gd_keymap_windowing("mir");
+        *maplen = qemu_input_map_xorgevdev_to_qcode_len;
+        return qemu_input_map_xorgevdev_to_qcode;
+    }
+#endif
+
 #ifdef GDK_WINDOWING_WIN32
     if (GDK_IS_WIN32_DISPLAY(dpy)) {
         trace_gd_keymap_windowing("win32");
@@ -1342,6 +1350,10 @@ static void gd_menu_show_menubar(GtkMenuItem *item, void *opaque)
     VirtualConsole *vc = gd_vc_find_current(s);
 
     if (s->full_screen) {
+        return;
+    }
+
+    if (getenv("QEMU_GTK_NO_MENU_BAR")) {
         return;
     }
 
@@ -2357,8 +2369,15 @@ static void early_gtk_display_init(DisplayOptions *opts)
         if (GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default())) {
             gtk_use_gl_area = true;
             gtk_gl_area_init();
-        } else
+        }
 #endif
+#if defined(GDK_WINDOWING_MIR)
+        else if (GDK_IS_MIR_DISPLAY(gdk_display_get_default())) {
+            gtk_use_gl_area = true;
+            gtk_gl_area_init();
+        }
+#endif
+        else
         {
 #ifdef CONFIG_X11
             DisplayGLMode mode = opts->has_gl ? opts->gl : DISPLAYGL_MODE_ON;

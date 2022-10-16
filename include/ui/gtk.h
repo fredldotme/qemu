@@ -18,6 +18,10 @@
 #include <gdk/gdkwayland.h>
 #endif
 
+#ifdef GDK_WINDOWING_MIR
+#include <gdk/gdkmir.h>
+#endif
+
 #include "ui/kbd-state.h"
 #if defined(CONFIG_OPENGL)
 #include "ui/egl-helpers.h"

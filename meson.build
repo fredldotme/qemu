@@ -815,6 +815,7 @@ endif
 
 gtk = not_found
 gtkx11 = not_found
+gtkmir = not_found
 if not get_option('gtk').auto() or (have_system and not cocoa.found())
   gtk = dependency('gtk+-3.0', version: '>=3.22.0',
                    method: 'pkg-config',
@@ -825,7 +826,11 @@ if not get_option('gtk').auto() or (have_system and not cocoa.found())
                         method: 'pkg-config',
                         required: false,
                         kwargs: static_kwargs)
-    gtk = declare_dependency(dependencies: [gtk, gtkx11])
+    gtkmir = dependency('gdk-3.0', version: '>=3.22.0',
+                        method: 'pkg-config',
+                        required: false,
+                        kwargs: static_kwargs)
+    gtk = declare_dependency(dependencies: [gtk, gtkx11, gtkmir])
   endif
 endif
 
@@ -837,6 +842,11 @@ endif
 x11 = not_found
 if gtkx11.found() or 'lm32-softmmu' in target_dirs
   x11 = dependency('x11', method: 'pkg-config', required: gtkx11.found(),
+                   kwargs: static_kwargs)
+endif
+mir = not_found
+if gtkmir.found()
+  mir = dependency('mirclient', required: gtkmir.found(),
                    kwargs: static_kwargs)
 endif
 vnc = not_found

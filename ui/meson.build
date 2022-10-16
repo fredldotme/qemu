@@ -65,7 +65,8 @@ if gtk.found()
   gtk_ss.add(gtk, vte, pixman, files('gtk.c'))
   gtk_ss.add(when: x11, if_true: files('x_keymap.c'))
   gtk_ss.add(when: [opengl, 'CONFIG_OPENGL'], if_true: files('gtk-gl-area.c'))
-  gtk_ss.add(when: [x11, opengl, 'CONFIG_OPENGL'], if_true: files('gtk-egl.c'))
+  gtk_ss.add(when: [x11, mir, opengl, 'CONFIG_OPENGL'], if_true: files('gtk-egl.c'))
+
   ui_modules += {'gtk' : gtk_ss}
 endif
 
