@@ -901,6 +901,7 @@ static bool fv_socket_lock(struct fuse_session *se)
 {
     g_autofree gchar *sk_name = NULL;
     g_autofree gchar *pidfile = NULL;
+    g_autofree gchar *state = NULL;
     g_autofree gchar *dir = NULL;
     Error *local_err = NULL;
     gboolean unprivileged = false;
@@ -916,7 +917,8 @@ static bool fv_socket_lock(struct fuse_session *se)
     if (unprivileged) {
         dir = g_strdup_printf("%s/virtiofsd", g_get_user_runtime_dir());
     } else {
-        dir = qemu_get_local_state_pathname("run/virtiofsd");
+        state = qemu_get_local_state_dir();
+        dir = g_build_filename(state, "run", "virtiofsd", NULL);
     }
 
     if (g_mkdir_with_parents(dir, S_IRWXU) < 0) {
