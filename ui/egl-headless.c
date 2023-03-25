@@ -200,11 +200,9 @@ static void egl_headless_init(DisplayState *ds, DisplayOptions *opts)
     egl_dpy *edpy;
     int idx;
 
-    if (egl_rendernode_init(opts->u.egl_headless.rendernode, mode) < 0) {
-        if (egl_hybris_init(mode) < 0) {
-            error_report("egl: render node and hybris init failed");
-            exit(1);
-        }
+    if (egl_hybris_init(mode) < 0 && egl_rendernode_init(opts->u.egl_headless.rendernode, mode) < 0) {
+        error_report("egl: render node and hybris init failed");
+        exit(1);
     }
 
     for (idx = 0;; idx++) {

@@ -500,7 +500,7 @@ bool qemu_egl_has_dmabuf(void)
 
 int qemu_egl_init_dpy_hybris(DisplayGLMode mode)
 {
-    return qemu_egl_init_dpy(EGL_DEFAULT_DISPLAY, 0, mode);
+    return qemu_egl_init_dpy(EGL_DEFAULT_DISPLAY, EGL_PLATFORM_ANDROID_KHR, mode);
 }
 
 int egl_hybris_init(DisplayGLMode mode)
