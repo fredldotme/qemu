@@ -85,12 +85,14 @@ void sdl2_gl_switch(DisplayChangeListener *dcl,
 
     scon->surface = new_surface;
 
+#if 0
     if (is_placeholder(new_surface) && qemu_console_get_index(dcl->con)) {
         qemu_gl_fini_shader(scon->gls);
         scon->gls = NULL;
         sdl2_window_destroy(scon);
         return;
     }
+#endif
 
     if (!scon->real_window) {
         sdl2_window_create(scon);
